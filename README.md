@@ -1,158 +1,162 @@
 # 💰 Smart Digital Finance Tracker
 
-> **An AI-powered personal finance dashboard that analyses your spending, advises on your budget, and generates professional financial reports — all powered by a 3-agent CrewAI pipeline.**
+> **A real-time stock & crypto dashboard combined with AI-powered financial analysis and personal expense tracking — all in one sleek app.**
 
 ---
 
-## 🌟 Overview
+## 🌟 What Is This App?
 
-The **Smart Digital Finance Tracker** is a full-stack, AI-driven financial management application built for the modern age. It combines the power of large language models, multi-agent orchestration, and real-time data visualisation to give you a complete picture of your financial health — and tell you exactly what to do about it.
+The **Smart Digital Finance Tracker** is a full-stack personal finance and investment platform. It pulls live market data for any stock or cryptocurrency, renders interactive candlestick charts, runs a silent AI analysis engine in the background, and delivers professional financial reports — all through a clean, user-friendly dashboard.
 
-Gone are the days of manually reviewing spreadsheets or guessing where your money goes. Simply log your transactions, ask the AI a finance question, and within minutes receive a structured, data-grounded financial report written by three specialised AI agents working in sequence.
-
-This project is built on the **Blueprint Blue architecture** — a production-grade, resilient AI pipeline featuring retry logic, token budgeting, JSON schema enforcement, and reviewer metacognition. It runs locally, in Docker, and deploys publicly to Streamlit Cloud with automated CI/CD via Jenkins.
+No finance jargon. No technical setup for end users. Just enter a ticker, hit a button, and get answers.
 
 ---
 
-## 🤖 How It Works — The A-A-R Pipeline
+## 📸 App Overview
 
-At the heart of the app is a **3-agent CrewAI pipeline** that processes every financial query sequentially:
-
-```
-📊 Expense Analyst  ──►  💡 Financial Advisor  ──►  📝 Report Writer
-     (Analyse)                  (Advise)                  (Report)
-```
-
-### Agent 1 — Expense Analyst
-Digs into your transaction history stored in the SQLite database. Queries spending by category, identifies patterns and anomalies, cross-references your data with live web research (via SerperDev), and surfaces at least 3 data-grounded financial insights. Everything it reports is traceable to real data — no fabricated numbers.
-
-### Agent 2 — Financial Advisor
-Takes the analyst's findings and applies proven budgeting frameworks — including the **50/30/20 rule** and zero-based budgeting — to generate personalised, prioritised recommendations. Every piece of advice maps directly back to your actual spending data stored in the database.
-
-### Agent 3 — Report Writer
-Transforms the raw analysis and advisory notes into a polished, professional financial report (400–600 words) structured as: **Overview → Key Findings → Recommendations → Action Plan**. The report is downloadable as a Markdown file.
-
----
-
-## ✨ Features
-
-| Feature | Description |
+| Tab | What It Does |
 |---|---|
-| 📊 **Live Dashboard** | Visual spending breakdown by category with interactive Plotly pie charts |
-| ➕ **Transaction Logging** | Add income/expense transactions with date, amount, category, and description |
-| 🤖 **AI Financial Analysis** | Ask any finance question and get a full 3-agent report in minutes |
-| 📥 **Report Download** | Export your AI-generated financial report as a `.md` file |
-| 🔬 **Smoke Test** | One-click environment diagnostics — checks all files, keys, imports, and DB |
-| 🔧 **Debug Panel** | Live session state and environment inspector |
-| 🔒 **Read-Only DB Guardrail** | SQL tool blocks all destructive queries (DROP/DELETE/UPDATE/INSERT) |
-| 🔄 **Retry Resilience** | Exponential backoff retries on all API calls (up to 3 attempts) |
-| 🧪 **Test Suite** | Pytest tests covering database, transactions, and run history |
+| 📈 **Markets** | Live candlestick chart, volume, moving averages, key metrics for any stock or crypto |
+| 🤖 **AI Analysis** | Ask any finance question — get a structured, professional report in 1–3 minutes |
+| 📊 **My Finances** | Spending breakdown by category with interactive pie chart and transaction history |
+| ➕ **Add Transaction** | Log daily expenses with date, amount, category, and description |
 
 ---
 
-## 🏗️ Architecture
+## 📈 Markets — Real-Time Charts
+
+Type any ticker and instantly get:
+
+- **Candlestick price chart** with volume bars — green for up, red for down
+- **Moving averages** — MA20 and MA50 overlaid on the price line
+- **Key metrics** — current price, % change, market cap, 52-week high/low
+- **Company summary** — expandable overview of the business
+- **Configurable period & interval** — from 1 month to 5 years, daily to monthly
+
+Supported assets include stocks, ETFs, indices, and cryptocurrencies:
+
+```
+AAPL   GOOGL   AMZN   TSLA   NVDA   MSFT
+BTC-USD   ETH-USD   SOL-USD   BNB-USD
+^GSPC (S&P 500)   ^DJI (Dow Jones)   ^IXIC (NASDAQ)
+```
+
+Quick-pick buttons in the sidebar for the most popular tickers.
+
+---
+
+## 🤖 AI Analysis — Powered by a 3-Agent Pipeline
+
+Behind the scenes, a silent AI crew analyses your query using three specialised agents working in sequence:
+
+```
+Expense Analyst  ──►  Financial Advisor  ──►  Report Writer
+```
+
+What the user sees: a clean text input and a professional financial report.
+What happens behind the scenes: real-time web research, database queries, cross-referenced financial advice, and structured report generation.
+
+Every report is structured as:
+1. **Overview** — summary of the financial situation
+2. **Key Findings** — at least 3 data-grounded insights
+3. **Recommendations** — prioritised action list
+4. **Action Plan** — specific next steps
+
+Reports are downloadable as `.md` files.
+
+---
+
+## 📊 Personal Finance Tracking
+
+- Log transactions by category: Food & Dining, Transport, Housing, Entertainment, Healthcare, Shopping, Utilities, Savings, Investments, Subscriptions
+- Interactive **donut pie chart** showing spending distribution
+- Full **transaction history** table
+- Summary metrics: total spent, number of transactions, top spending category
+
+---
+
+## 🏗️ Project Structure
 
 ```
 smart-finance-tracker/
 ├── app/
-│   ├── streamlit_app.py     # Main dashboard UI (3 tabs)
-│   └── main.py              # FastAPI backend with 5 endpoints
+│   ├── streamlit_app.py     # Full dashboard — 4 tabs, charts, AI analysis
+│   └── main.py              # FastAPI backend (5 endpoints)
 ├── src/
-│   ├── crew.py              # CrewAI orchestration — A-A-R pipeline
-│   ├── agents/
-│   ├── tasks/
+│   ├── crew.py              # AI orchestration (A-A-R pipeline)
 │   └── tools/
-│       ├── database.py      # SQLite helpers (transactions, budgets, history)
-│       ├── custom_tools.py  # SafeQueryTool, WebScraperTool, ContextWriterTool
+│       ├── database.py      # SQLite — transactions, budgets, run history
+│       ├── custom_tools.py  # SQL guardrail, web scraper, context writer
 │       ├── resilience.py    # 4-layer resilience stack
 │       └── debug_tools.py   # Smoke test & execution tracer
 ├── config/
-│   ├── agents.yaml          # Agent roles, goals, backstories
-│   └── tasks.yaml           # Task descriptions and expected outputs
+│   ├── agents.yaml          # Agent definitions
+│   └── tasks.yaml           # Task definitions
 ├── tests/
 │   └── test_basic.py        # Pytest test suite
-├── Dockerfile               # Container definition
-├── docker-compose.yml       # Jenkins + App services
-├── Jenkinsfile              # CI/CD pipeline (test → build → push)
-└── requirements.txt         # Python dependencies
+├── Dockerfile
+├── docker-compose.yml       # Jenkins + App
+├── Jenkinsfile              # CI/CD pipeline
+└── requirements.txt
 ```
 
 ---
 
-## 🛡️ 4-Layer Resilience Stack
+## 🛡️ Resilience & Reliability
 
 | Layer | Protection |
 |---|---|
-| **L1 — Retry** | Exponential backoff with jitter — up to 3 retries on any API failure |
+| **L1 — Retry** | Exponential backoff with jitter — up to 3 retries on API failure |
 | **L2 — Budget Cap** | `max_tokens=5000` per agent call — prevents runaway API costs |
 | **L3 — Schema Enforcement** | Pydantic model validates all structured JSON outputs |
-| **L4 — Reviewer Agent** | Metacognition agent fact-checks the report against source data |
-
----
-
-## 🗄️ Database Schema
-
-The app uses **SQLite** (`memory.db`) with four tables:
-
-| Table | Purpose |
-|---|---|
-| `transactions` | Stores every logged expense/income (date, amount, category, description) |
-| `budgets` | Stores budget limits per category and period |
-| `run_history` | Logs every AI analysis run with topic, result, and status |
-| `knowledge_items` | Key-value store for persistent financial knowledge |
+| **L4 — Reviewer** | Fact-checking agent verifies report accuracy before delivery |
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.12+
-- Docker Desktop (for Jenkins CI/CD)
-- OpenAI API key ([platform.openai.com](https://platform.openai.com))
-- Serper API key ([serper.dev](https://serper.dev))
+- Python 3.12 (not 3.13+ — required by AI dependencies)
+- OpenAI API key → [platform.openai.com](https://platform.openai.com)
+- Serper API key → [serper.dev](https://serper.dev)
 
 ### 1. Clone & Set Up
 
 ```bash
 git clone https://github.com/aftonis/smart-finance-tracker.git
 cd smart-finance-tracker
-
-# Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
 ```
 
-### 2. Configure API Keys
+### 2. Create Virtual Environment with Python 3.12
 
-Copy `.env.example` to `.env` and fill in your keys:
+```bash
+# Windows
+"C:\Users\<YourName>\AppData\Local\Programs\Python\Python312\python.exe" -m venv venv
+venv\Scripts\activate
+```
+
+### 3. Add Your API Keys
+
+Copy `.env.example` to `.env` and fill in:
 
 ```env
 OPENAI_API_KEY=sk-proj-...
 SERPER_API_KEY=...
 ```
 
-### 3. Install Dependencies
+### 4. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the Dashboard
+### 5. Run the App
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
 Opens at **http://localhost:8501**
-
-### 5. (Optional) Run the FastAPI Backend
-
-```bash
-uvicorn app.main:app --reload
-```
-
-API docs at **http://localhost:8000/docs**
 
 ---
 
@@ -162,38 +166,67 @@ API docs at **http://localhost:8000/docs**
 # Start Jenkins + app containers
 docker compose up -d
 
-# Verify running
+# Verify
 docker ps
 
-# Access Jenkins
+# Jenkins dashboard
 open http://localhost:8080
 
 # Stop everything
 docker compose down
 ```
 
-The **Jenkinsfile** defines a 5-stage pipeline:
-1. `Checkout` — pulls latest code from GitHub
-2. `Install Dependencies` — runs `pip install -r requirements.txt`
-3. `Test` — runs `pytest tests/ -v`
-4. `Docker Build` — builds the container image
-5. `Push to GitHub` — triggers Streamlit Cloud auto-redeploy
+**Jenkins pipeline stages:**
+1. `Checkout` — pulls latest code
+2. `Install Dependencies` — pip install
+3. `Test` — pytest
+4. `Docker Build` — builds container
+5. `Push to GitHub` — triggers Streamlit Cloud redeploy
 
 ---
 
 ## ☁️ Streamlit Cloud Deployment
 
 1. Go to [share.streamlit.io](https://share.streamlit.io)
-2. Connect this repository (`aftonis/smart-finance-tracker`)
-3. Set **Main file path** to `app/streamlit_app.py`
-4. Under **Advanced settings**, add secrets:
+2. Connect `aftonis/smart-finance-tracker`
+3. Main file: `app/streamlit_app.py`
+4. Add secrets in **Advanced settings**:
    ```
    OPENAI_API_KEY = "sk-proj-..."
    SERPER_API_KEY = "..."
    ```
-5. Click **Deploy** — live in ~3 minutes
+5. Click **Deploy**
 
-Every `git push origin master` automatically triggers a redeploy.
+Every `git push origin master` triggers an automatic redeploy.
+
+---
+
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Health check |
+| `POST` | `/analyse` | Run AI financial analysis |
+| `POST` | `/transaction` | Log a transaction |
+| `GET` | `/transactions` | List all transactions |
+| `GET` | `/spending` | Spending by category |
+
+---
+
+## 📦 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Streamlit 1.56+ |
+| **Charts** | Plotly (candlestick, pie, line) |
+| **Market Data** | yfinance (stocks, crypto, indices) |
+| **Technical Indicators** | pandas-ta |
+| **AI Orchestration** | CrewAI |
+| **Backend API** | FastAPI + Uvicorn |
+| **Database** | SQLite |
+| **Validation** | Pydantic v2 |
+| **CI/CD** | Jenkins (Docker) |
+| **Deployment** | Streamlit Cloud |
 
 ---
 
@@ -203,54 +236,18 @@ Every `git push origin master` automatically triggers a redeploy.
 pytest tests/ -v
 ```
 
-Tests cover:
-- Database table creation
-- Transaction save and retrieval
-- Spending aggregation by category (using `SUM()`)
-- Run history logging
-
----
-
-## 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | Health check |
-| `POST` | `/analyse` | Run full A-A-R AI analysis |
-| `POST` | `/transaction` | Log a new transaction |
-| `GET` | `/transactions` | List all transactions |
-| `GET` | `/spending` | Total spending by category |
-
----
-
-## 📦 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| AI Orchestration | CrewAI 0.80+ |
-| LLM | OpenAI GPT (via CrewAI) |
-| Web Search | SerperDev API |
-| Frontend | Streamlit 1.40+ |
-| Backend API | FastAPI + Uvicorn |
-| Database | SQLite (via Python sqlite3) |
-| Charts | Plotly Express |
-| Validation | Pydantic v2 |
-| CI/CD | Jenkins (Docker) |
-| Deployment | Streamlit Cloud |
-| Containerisation | Docker + Docker Compose |
-
 ---
 
 ## 📋 Daily Workflow
 
 ```bash
-# 1. Activate environment
+# Activate environment
 venv\Scripts\activate
 
-# 2. Run the app
+# Run the app
 streamlit run app/streamlit_app.py
 
-# 3. Push changes
+# Push changes
 git add .
 git commit -m "Your message"
 git push origin master
