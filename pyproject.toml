@@ -1,0 +1,9 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "smart-digital-finance-tracker"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = []

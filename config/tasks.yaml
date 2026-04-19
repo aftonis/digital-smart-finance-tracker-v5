@@ -1,0 +1,44 @@
+expense_analysis_task:
+  description: >
+    Analyse the following financial query or topic: '{user_topic}'.
+    Query the knowledge database for any stored transactions, budget limits,
+    and historical spending patterns.
+    Use web search to find current best practices and benchmarks relevant
+    to the user's financial situation.
+    Identify at least 3 key spending insights or financial facts.
+    Save important context to the Semantic Vault using the Context Writer Tool.
+  expected_output: >
+    A structured expense analysis containing:
+    1. At least 3 key financial insights grounded in data
+    2. Spending patterns or budget comparisons
+    3. Any relevant benchmarks or industry standards
+    4. Data confidence level for each insight (High/Medium/Low)
+
+advice_task:
+  description: >
+    Based on the expense analysis for '{user_topic}', provide personalised
+    financial advice.
+    Cross-reference findings with stored budgets and financial best practices.
+    Apply the 50/30/20 budgeting rule where relevant.
+    Identify at least 3 specific, actionable recommendations.
+    Use SUM() for any numerical aggregations from the database — never estimate.
+  expected_output: >
+    A structured financial advisory report containing:
+    1. Assessment of current financial health
+    2. At least 3 specific, actionable recommendations
+    3. Priority ranking for each recommendation (High/Medium/Low)
+    4. Estimated savings or benefit for each action
+
+report_task:
+  description: >
+    Write a professional financial summary report for '{user_topic}' using
+    the expense analysis and financial advice provided in context.
+    Structure: Overview → Key Findings → Recommendations → Action Plan.
+    Every claim must be traceable to the context provided.
+    Target length: 400-600 words. Professional yet accessible tone.
+  expected_output: >
+    A complete, professional financial report (400-600 words) with:
+    1. Overview (financial situation summary)
+    2. Key Findings (at least 3, with supporting data)
+    3. Recommendations (prioritised action list)
+    4. Action Plan (specific next steps with timeline)

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sqlite3, json, yaml; print\\('stdlib OK'\\)\")",
+      "Bash(python -m py_compile src/tools/database.py src/tools/custom_tools.py src/tools/resilience.py src/tools/debug_tools.py src/crew.py app/streamlit_app.py app/main.py tests/test_basic.py)",
+      "Bash(python -c ' *)",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(winget install *)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh --version)"
+    ]
+  }
+}
