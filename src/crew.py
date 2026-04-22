@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from crewai import Agent, Task, Crew, Process
+from crewai import Agent, Task, Crew, Process, LLM
 from pydantic import BaseModel
 from crewai.tools import BaseTool
 from crewai_tools import FileReadTool, SerperDevTool
@@ -35,6 +35,25 @@ CONFIG_DIR = Path(__file__).parent.parent / "config"
 tracer = ExecutionTracer()
 
 
+# ── LLM: Anthropic Claude (via CrewAI's LiteLLM wrapper) ──────────────────────
+# Model can be overridden via CLAUDE_MODEL env var. Default: Sonnet — best
+# quality/cost balance for financial reasoning.
+_CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "anthropic/claude-sonnet-4-6")
+claude_llm = LLM(
+    model=_CLAUDE_MODEL,
+    temperature=0.3,
+    max_tokens=5000,
+)
+
+# ── Serper web search is optional — only enable if SERPER_API_KEY is set ─────
+def _serper_if_available():
+    key = os.environ.get("SERPER_API_KEY", "")
+    if key and not key.startswith("your_"):
+        return SerperDevTool()
+    logger.info("SERPER_API_KEY not set — web search disabled; agents will rely on DB + context.")
+    return None
+
+
 def _load_config(filename: str) -> dict:
     config_path = CONFIG_DIR / filename
     if not config_path.exists():
@@ -47,17 +66,22 @@ def build_crew(user_topic: str) -> Crew:
     agents_cfg = _load_config("agents.yaml")
     tasks_cfg  = _load_config("tasks.yaml")
 
-    search_tool    = SerperDevTool()
+    search_tool    = _serper_if_available()
     file_read_tool = FileReadTool(file_path="context_notes.txt")
     sql_tool       = SafeQueryTool()
     scraper_tool   = WebScraperTool()
     ctx_writer_tool = ContextWriterTool()
 
+    analyst_tools = [scraper_tool, sql_tool, file_read_tool]
+    if search_tool is not None:
+        analyst_tools.insert(0, search_tool)
+
     expense_analyst = Agent(
         role      = agents_cfg["expense_analyst"]["role"],
         goal      = agents_cfg["expense_analyst"]["goal"],
         backstory = agents_cfg["expense_analyst"]["backstory"],
-        tools     = [search_tool, scraper_tool, sql_tool, file_read_tool],
+        tools     = analyst_tools,
+        llm       = claude_llm,
         verbose   = True,
         allow_delegation = False,
     )
@@ -67,6 +91,7 @@ def build_crew(user_topic: str) -> Crew:
         goal      = agents_cfg["financial_advisor"]["goal"],
         backstory = agents_cfg["financial_advisor"]["backstory"],
         tools     = [sql_tool, file_read_tool],
+        llm       = claude_llm,
         verbose   = True,
         allow_delegation = False,
     )
@@ -76,6 +101,7 @@ def build_crew(user_topic: str) -> Crew:
         goal      = agents_cfg["report_writer"]["goal"],
         backstory = agents_cfg["report_writer"]["backstory"],
         tools     = [ctx_writer_tool],
+        llm       = claude_llm,
         verbose   = True,
         allow_delegation = False,
     )
@@ -104,15 +130,14 @@ def build_crew(user_topic: str) -> Crew:
         context         = [expense_analysis_task, advice_task],
     )
 
+    # Memory disabled: CrewAI's default memory needs an OpenAI embedder.
+    # We get clean multi-agent sequential execution without it; can re-enable
+    # later with a local embedder (e.g. sentence-transformers) if needed.
     crew = Crew(
         agents  = [expense_analyst, financial_advisor, report_writer],
         tasks   = [expense_analysis_task, advice_task, report_task],
         process = Process.sequential,
-        memory  = True,
-        embedder= {
-            "provider": "openai",
-            "config"  : {"model": "text-embedding-3-small"},
-        },
+        memory  = False,
         verbose = True,
     )
     return crew
