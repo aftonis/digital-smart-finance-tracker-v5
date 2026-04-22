@@ -78,8 +78,48 @@ st.markdown("""
         padding: 24px;
         margin-top: 16px;
     }
-    div[data-testid="stTabs"] button {
+    /* Make the main 5 tabs bigger and bolder */
+    div[data-testid="stTabs"] > div > div > div > button {
+        font-size: 1.05rem;
+        font-weight: 700;
+        padding: 14px 28px;
+        min-height: 56px;
+        border-radius: 10px 10px 0 0;
+        margin-right: 4px;
+    }
+    div[data-testid="stTabs"] > div > div > div > button[aria-selected="true"] {
+        background: linear-gradient(90deg, rgba(0,200,150,0.18), rgba(0,120,255,0.18));
+        border-bottom: 3px solid #00C896;
+        color: #FFFFFF;
+    }
+    /* Compact index-strip cards */
+    .index-strip {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 10px;
+        padding: 10px 16px;
+        text-align: center;
+        height: 72px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .index-name {
+        font-size: 0.72rem;
+        color: #8B949E;
         font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .index-price {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-top: 2px;
+    }
+    .index-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 1px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -90,7 +130,7 @@ setup_knowledge_db()
 for key, default in [
     ("last_result", None),
     ("run_count", 0),
-    ("last_ticker", "AAPL"),
+    ("last_ticker", ""),          # empty → don't auto-load a chart on first visit
     ("last_query", ""),
 ]:
     if key not in st.session_state:
@@ -135,8 +175,64 @@ with st.sidebar:
     st.caption("Smart Digital Finance Tracker v1.0")
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-st.markdown('<p class="main-header">💰 Smart Digital Finance Tracker</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Real-time markets · AI-powered analysis · Personal finance tracking</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">💰 Digital Smart Finance Tracker v5</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Real-time markets · AI-powered analysis · Loan rates · Finance calculator</p>', unsafe_allow_html=True)
+
+# ── Compact market-index strip (NASDAQ + majors) ──────────────────────────────
+@st.cache_data(ttl=120)
+def _fetch_index_snapshot(symbols: list) -> dict:
+    """Fetch latest close + daily % change for a list of symbols (cached 2min)."""
+    import yfinance as yf
+    out = {}
+    for sym in symbols:
+        try:
+            hist = yf.Ticker(sym).history(period="5d", interval="1d")
+            if len(hist) >= 2:
+                last = float(hist["Close"].iloc[-1])
+                prev = float(hist["Close"].iloc[-2])
+                pct = (last - prev) / prev * 100 if prev else 0.0
+                out[sym] = (last, pct)
+        except Exception:
+            pass
+    return out
+
+_indices = [
+    ("^IXIC",   "NASDAQ"),
+    ("^GSPC",   "S&P 500"),
+    ("^DJI",    "DOW JONES"),
+    ("BTC-USD", "BITCOIN"),
+    ("ETH-USD", "ETHEREUM"),
+    ("GC=F",    "GOLD"),
+]
+_snap = _fetch_index_snapshot([s for s, _ in _indices])
+
+_strip_cols = st.columns(len(_indices))
+for col, (sym, label) in zip(_strip_cols, _indices):
+    data = _snap.get(sym)
+    if data:
+        price, pct = data
+        arrow = "▲" if pct >= 0 else "▼"
+        color = "#00C896" if pct >= 0 else "#FF4B4B"
+        fmt = f"${price:,.0f}" if price >= 1000 else f"${price:,.2f}"
+        col.markdown(
+            f"""<div class="index-strip">
+                <div class="index-name">{label}</div>
+                <div class="index-price">{fmt}</div>
+                <div class="index-change" style="color:{color}">{arrow} {pct:+.2f}%</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    else:
+        col.markdown(
+            f"""<div class="index-strip">
+                <div class="index-name">{label}</div>
+                <div class="index-price" style="color:#8B949E">—</div>
+                <div class="index-change" style="color:#8B949E">offline</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+st.markdown("")  # spacing
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
@@ -158,8 +254,10 @@ with tab1:
     with col_go:
         load_chart = st.button("Load Chart", use_container_width=True, type="primary")
 
-    if load_chart or ticker_input:
-        ticker = ticker_input.strip().upper()
+    ticker = (ticker_input or "").strip().upper()
+    if not ticker:
+        st.info("👆 Pick a ticker from the sidebar, type one above, or click **Load Chart**. Indices at the top update every 2 minutes.")
+    elif load_chart or ticker:
         st.session_state["last_ticker"] = ticker
 
         try:
