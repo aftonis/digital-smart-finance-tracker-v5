@@ -19,6 +19,16 @@ from src.tools.database import (
     get_transactions,
     get_spending_by_category,
 )
+from src.tools.calculators import (
+    calculate_simple_interest,
+    calculate_compound_interest,
+    calculate_future_value,
+    calculate_present_value,
+    calculate_future_value_annuity,
+    calculate_present_value_annuity,
+    COMPOUND_FREQUENCIES,
+)
+import numpy as np
 
 st.set_page_config(
     page_title="Smart Digital Finance Tracker",
@@ -94,17 +104,28 @@ with st.sidebar:
     st.markdown("### 📌 Quick Tickers")
     quick = {
         "🍎 Apple": "AAPL",
-        "🔍 Google": "GOOGL",
         "₿ Bitcoin": "BTC-USD",
-        "Ξ Ethereum": "ETH-USD",
-        "📦 Amazon": "AMZN",
-        "🤖 NVIDIA": "NVDA",
-        "📱 Tesla": "TSLA",
         "🏦 S&P 500": "^GSPC",
     }
     for label, ticker in quick.items():
         if st.button(label, use_container_width=True, key=f"btn_{ticker}"):
             st.session_state["last_ticker"] = ticker
+
+    st.markdown("##### 🔎 More tickers")
+    more_options = [
+        "GOOGL — Google", "AMZN — Amazon", "NVDA — NVIDIA", "TSLA — Tesla",
+        "MSFT — Microsoft", "META — Meta", "NFLX — Netflix", "ETH-USD — Ethereum",
+        "SOL-USD — Solana", "^DJI — Dow Jones", "^IXIC — Nasdaq", "GC=F — Gold",
+        "Custom…",
+    ]
+    picked = st.selectbox("Pick or type a ticker", more_options, index=0, key="ticker_picker")
+    if picked == "Custom…":
+        custom = st.text_input("Enter any ticker", placeholder="e.g. COIN, QQQ, AVAX-USD", key="custom_ticker")
+        if st.button("Load custom", use_container_width=True) and custom.strip():
+            st.session_state["last_ticker"] = custom.strip().upper()
+    else:
+        if st.button(f"Load {picked.split(' — ')[0]}", use_container_width=True):
+            st.session_state["last_ticker"] = picked.split(" — ")[0]
 
     st.markdown("---")
     st.markdown("### ⚙️ Settings")
@@ -118,7 +139,9 @@ st.markdown('<p class="main-header">💰 Smart Digital Finance Tracker</p>', uns
 st.markdown('<p class="sub-header">Real-time markets · AI-powered analysis · Personal finance tracking</p>', unsafe_allow_html=True)
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📈 Markets", "🤖 AI Analysis", "📊 My Finances", "➕ Add Transaction"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["📈 Markets", "🤖 AI Analysis", "📊 My Finances", "➕ Add Transaction", "🧮 Calculator"]
+)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — MARKETS
@@ -320,6 +343,93 @@ with tab2:
 # TAB 3 — MY FINANCES
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab3:
+    # ── Loan Rates Calculator ──────────────────────────────────────────────────
+    st.markdown("### 🏦 Major Loan Rates — Daily / Weekly / Monthly")
+    st.caption("Edit any APR (%) or loan amount to recalculate instantly. Rates are indicative US/UK averages — update to match your actual loan offers.")
+
+    default_loans = pd.DataFrame([
+        {"Loan Type": "Mortgage (30-yr fixed)", "APR (%)": 6.85, "Amount": 250000.0},
+        {"Loan Type": "Mortgage (15-yr fixed)", "APR (%)": 6.10, "Amount": 250000.0},
+        {"Loan Type": "Auto Loan (new, 60-mo)", "APR (%)": 7.50, "Amount": 30000.0},
+        {"Loan Type": "Auto Loan (used, 48-mo)", "APR (%)": 8.90, "Amount": 18000.0},
+        {"Loan Type": "Personal Loan",           "APR (%)": 12.50, "Amount": 10000.0},
+        {"Loan Type": "Credit Card (avg)",       "APR (%)": 22.75, "Amount": 5000.0},
+        {"Loan Type": "Student Loan (federal)",  "APR (%)": 6.53,  "Amount": 35000.0},
+        {"Loan Type": "HELOC",                   "APR (%)": 9.25,  "Amount": 50000.0},
+        {"Loan Type": "Payday Loan",             "APR (%)": 391.0, "Amount": 500.0},
+    ])
+
+    edited_loans = st.data_editor(
+        default_loans,
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Loan Type": st.column_config.TextColumn("Loan Type", width="medium"),
+            "APR (%)":   st.column_config.NumberColumn("APR (%)",  min_value=0.0, max_value=1000.0, step=0.05, format="%.2f"),
+            "Amount":    st.column_config.NumberColumn("Principal ($)", min_value=0.0, step=100.0, format="$%.2f"),
+        },
+        key="loan_editor",
+    )
+
+    # Calculate daily / weekly / monthly interest costs + effective rates
+    df_rates = edited_loans.copy()
+    df_rates["Daily Rate (%)"]   = (df_rates["APR (%)"] / 365).round(4)
+    df_rates["Weekly Rate (%)"]  = (df_rates["APR (%)"] / 52).round(4)
+    df_rates["Monthly Rate (%)"] = (df_rates["APR (%)"] / 12).round(4)
+    df_rates["Daily Interest ($)"]   = (df_rates["Amount"] * df_rates["APR (%)"] / 100 / 365).round(2)
+    df_rates["Weekly Interest ($)"]  = (df_rates["Amount"] * df_rates["APR (%)"] / 100 / 52).round(2)
+    df_rates["Monthly Interest ($)"] = (df_rates["Amount"] * df_rates["APR (%)"] / 100 / 12).round(2)
+    df_rates["Yearly Interest ($)"]  = (df_rates["Amount"] * df_rates["APR (%)"] / 100).round(2)
+
+    display_cols = [
+        "Loan Type", "APR (%)", "Amount",
+        "Daily Rate (%)", "Weekly Rate (%)", "Monthly Rate (%)",
+        "Daily Interest ($)", "Weekly Interest ($)", "Monthly Interest ($)", "Yearly Interest ($)",
+    ]
+    st.markdown("#### 📋 Calculated Rates & Interest Cost")
+    st.dataframe(
+        df_rates[display_cols].style.format({
+            "APR (%)":              "{:.2f}%",
+            "Amount":               "${:,.2f}",
+            "Daily Rate (%)":       "{:.4f}%",
+            "Weekly Rate (%)":      "{:.4f}%",
+            "Monthly Rate (%)":     "{:.4f}%",
+            "Daily Interest ($)":   "${:,.2f}",
+            "Weekly Interest ($)":  "${:,.2f}",
+            "Monthly Interest ($)": "${:,.2f}",
+            "Yearly Interest ($)":  "${:,.2f}",
+        }),
+        use_container_width=True,
+        height=360,
+    )
+
+    # Comparison bar chart
+    fig_loans = go.Figure()
+    fig_loans.add_trace(go.Bar(
+        x=df_rates["Loan Type"], y=df_rates["Monthly Interest ($)"],
+        name="Monthly Interest", marker_color="#00C896",
+    ))
+    fig_loans.add_trace(go.Bar(
+        x=df_rates["Loan Type"], y=df_rates["Weekly Interest ($)"],
+        name="Weekly Interest", marker_color="#0078FF",
+    ))
+    fig_loans.add_trace(go.Bar(
+        x=df_rates["Loan Type"], y=df_rates["Daily Interest ($)"],
+        name="Daily Interest", marker_color="#FFB300",
+    ))
+    fig_loans.update_layout(
+        template="plotly_dark", paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
+        title="Interest Cost by Period — per Loan",
+        barmode="group", height=380, margin=dict(l=10, r=10, t=50, b=10),
+        xaxis=dict(gridcolor="#21262D", tickangle=-25),
+        yaxis=dict(gridcolor="#21262D", title="Interest ($)"),
+    )
+    st.plotly_chart(fig_loans, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Spending Overview (existing) ───────────────────────────────────────────
     st.markdown("### 📊 Spending Overview")
 
     transactions   = get_transactions()
@@ -392,3 +502,204 @@ with tab4:
             save_transaction(str(tx_date), tx_amount, tx_cat, tx_desc.strip())
             st.success(f"Saved: {tx_cat} — £{tx_amount:.2f}")
             st.rerun()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — FINANCE CALCULATOR (from Digital_Smart_Finance_Calculator notebook)
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab5:
+    st.markdown("### 🧮 Digital Smart Finance Calculator")
+    st.caption("Six core time-value-of-money calculators with growth visualisations. Ported from the Colab notebook.")
+
+    calc_tabs = st.tabs([
+        "Simple Interest", "Compound Interest", "Future Value",
+        "Present Value", "FV Annuity", "PV Annuity",
+    ])
+
+    def _freq_selector(key: str) -> int:
+        """Compound frequency dropdown → returns n per year."""
+        label = st.selectbox(
+            "Compounding frequency", list(COMPOUND_FREQUENCIES.keys()),
+            index=3, key=f"freq_{key}",
+        )
+        return COMPOUND_FREQUENCIES[label]
+
+    def _metric_card(label: str, value: str, color: str = "#00C896"):
+        st.markdown(
+            f"""<div class="metric-card">
+                <div class="metric-value" style="color:{color}">{value}</div>
+                <div class="metric-label">{label}</div></div>""",
+            unsafe_allow_html=True,
+        )
+
+    def _growth_chart(years: np.ndarray, values: list, title: str, ylabel: str = "Value ($)"):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=years, y=values, mode="lines+markers",
+            line=dict(color="#00C896", width=2.5),
+            marker=dict(size=6, color="#0078FF"),
+            fill="tozeroy", fillcolor="rgba(0,200,150,0.08)",
+        ))
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
+            title=dict(text=title, font=dict(size=14)),
+            xaxis=dict(title="Years", gridcolor="#21262D"),
+            yaxis=dict(title=ylabel, gridcolor="#21262D"),
+            height=350, margin=dict(l=10, r=10, t=50, b=10),
+        )
+        return fig
+
+    # ─── SIMPLE INTEREST ─────────────────────────────────────────────────
+    with calc_tabs[0]:
+        st.markdown("##### Formula: `I = P × r × t`")
+        c1, c2, c3 = st.columns(3)
+        si_principal = c1.number_input("Principal ($)", min_value=0.0, value=1000.0, step=100.0, key="si_p")
+        si_rate      = c2.number_input("Annual rate (%)", min_value=0.0, value=5.0, step=0.25, key="si_r")
+        si_time      = c3.number_input("Time (years)", min_value=0.0, value=3.0, step=0.5, key="si_t")
+
+        si_interest = calculate_simple_interest(si_principal, si_rate / 100, si_time)
+        total_si = si_principal + si_interest
+
+        m1, m2, m3 = st.columns(3)
+        with m1: _metric_card("Interest earned", f"${si_interest:,.2f}")
+        with m2: _metric_card("Total amount", f"${total_si:,.2f}", "#0078FF")
+        with m3: _metric_card("Growth %", f"{(si_interest/si_principal*100 if si_principal else 0):.2f}%", "#FFB300")
+
+        if si_time > 0:
+            years = np.linspace(0, si_time, 30)
+            vals = [si_principal + calculate_simple_interest(si_principal, si_rate/100, t) for t in years]
+            st.plotly_chart(_growth_chart(years, vals, "Simple Interest Growth"), use_container_width=True)
+
+    # ─── COMPOUND INTEREST ───────────────────────────────────────────────
+    with calc_tabs[1]:
+        st.markdown("##### Formula: `A = P × (1 + r/n)^(n·t)`")
+        c1, c2, c3 = st.columns(3)
+        ci_principal = c1.number_input("Principal ($)", min_value=0.0, value=1000.0, step=100.0, key="ci_p")
+        ci_rate      = c2.number_input("Annual rate (%)", min_value=0.0, value=5.0, step=0.25, key="ci_r")
+        ci_time      = c3.number_input("Time (years)", min_value=0.0, value=3.0, step=0.5, key="ci_t")
+        ci_n = _freq_selector("ci")
+
+        total_ci = calculate_compound_interest(ci_principal, ci_rate/100, ci_time, ci_n)
+        ci_interest = total_ci - ci_principal
+
+        m1, m2, m3 = st.columns(3)
+        with m1: _metric_card("Compound interest", f"${ci_interest:,.2f}")
+        with m2: _metric_card("Total amount", f"${total_ci:,.2f}", "#0078FF")
+        with m3: _metric_card("Growth %", f"{(ci_interest/ci_principal*100 if ci_principal else 0):.2f}%", "#FFB300")
+
+        if ci_time > 0:
+            years = np.linspace(0, ci_time, 30)
+            vals_compound = [calculate_compound_interest(ci_principal, ci_rate/100, t, ci_n) for t in years]
+            vals_simple   = [ci_principal + calculate_simple_interest(ci_principal, ci_rate/100, t) for t in years]
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=years, y=vals_compound, name="Compound", line=dict(color="#00C896", width=2.5)))
+            fig.add_trace(go.Scatter(x=years, y=vals_simple,   name="Simple",   line=dict(color="#FFB300", width=2, dash="dot")))
+            fig.update_layout(
+                template="plotly_dark", paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
+                title="Compound vs Simple — same P, r, t",
+                xaxis=dict(title="Years", gridcolor="#21262D"),
+                yaxis=dict(title="Value ($)", gridcolor="#21262D"),
+                height=350, margin=dict(l=10, r=10, t=50, b=10),
+                legend=dict(orientation="h", y=1.08),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ─── FUTURE VALUE ────────────────────────────────────────────────────
+    with calc_tabs[2]:
+        st.markdown("##### Formula: `FV = PV × (1 + r/n)^(n·t)` — what today's money is worth later")
+        c1, c2, c3 = st.columns(3)
+        fv_pv    = c1.number_input("Present value ($)", min_value=0.0, value=1000.0, step=100.0, key="fv_pv")
+        fv_rate  = c2.number_input("Annual rate (%)",   min_value=0.0, value=5.0, step=0.25, key="fv_r")
+        fv_time  = c3.number_input("Time (years)",      min_value=0.0, value=10.0, step=1.0, key="fv_t")
+        fv_n = _freq_selector("fv")
+
+        fv_result = calculate_future_value(fv_pv, fv_rate/100, fv_time, fv_n)
+
+        m1, m2 = st.columns(2)
+        with m1: _metric_card("Future value", f"${fv_result:,.2f}")
+        with m2: _metric_card("Total gain",   f"${fv_result - fv_pv:,.2f}", "#0078FF")
+
+        if fv_time > 0:
+            years = np.arange(1, int(fv_time)+2)
+            vals = [calculate_future_value(fv_pv, fv_rate/100, t, fv_n) for t in years]
+            st.plotly_chart(_growth_chart(years, vals, "Future Value over Time"), use_container_width=True)
+
+    # ─── PRESENT VALUE ───────────────────────────────────────────────────
+    with calc_tabs[3]:
+        st.markdown("##### Formula: `PV = FV / (1 + r/n)^(n·t)` — what future money is worth today")
+        c1, c2, c3 = st.columns(3)
+        pv_fv    = c1.number_input("Future value ($)", min_value=0.0, value=10000.0, step=500.0, key="pv_fv")
+        pv_rate  = c2.number_input("Annual rate (%)",  min_value=0.0, value=5.0, step=0.25, key="pv_r")
+        pv_time  = c3.number_input("Years until",      min_value=0.0, value=10.0, step=1.0, key="pv_t")
+        pv_n = _freq_selector("pv")
+
+        pv_result = calculate_present_value(pv_fv, pv_rate/100, pv_time, pv_n)
+
+        m1, m2 = st.columns(2)
+        with m1: _metric_card("Present value", f"${pv_result:,.2f}")
+        with m2: _metric_card("Discount",      f"${pv_fv - pv_result:,.2f}", "#FF4B4B")
+
+        if pv_time > 0:
+            years = np.arange(1, 31)
+            vals = [calculate_present_value(pv_fv, pv_rate/100, t, pv_n) for t in years]
+            st.plotly_chart(
+                _growth_chart(years, vals, f"Present Value vs Time (FV=${pv_fv:,.0f} @ {pv_rate}%)",
+                              ylabel="Present Value ($)"),
+                use_container_width=True,
+            )
+
+    # ─── FV ANNUITY ──────────────────────────────────────────────────────
+    with calc_tabs[4]:
+        st.markdown("##### Formula: `FVA = P × [((1 + r/n)^(n·t) − 1) / (r/n)]` — regular deposits growing to a target")
+        c1, c2, c3 = st.columns(3)
+        fva_pmt   = c1.number_input("Payment per period ($)", min_value=0.0, value=100.0, step=25.0, key="fva_p")
+        fva_rate  = c2.number_input("Annual rate (%)",        min_value=0.0, value=5.0, step=0.25, key="fva_r")
+        fva_time  = c3.number_input("Time (years)",           min_value=0.0, value=10.0, step=1.0, key="fva_t")
+        fva_n = _freq_selector("fva")
+
+        fva_result = calculate_future_value_annuity(fva_pmt, fva_rate/100, fva_time, fva_n)
+        total_paid = fva_pmt * fva_n * fva_time
+
+        m1, m2, m3 = st.columns(3)
+        with m1: _metric_card("Future value of annuity", f"${fva_result:,.2f}")
+        with m2: _metric_card("Total contributions",     f"${total_paid:,.2f}", "#0078FF")
+        with m3: _metric_card("Interest earned",         f"${fva_result - total_paid:,.2f}", "#FFB300")
+
+        if fva_time > 0:
+            years = np.arange(1, int(fva_time)+2)
+            vals_fv  = [calculate_future_value_annuity(fva_pmt, fva_rate/100, t, fva_n) for t in years]
+            vals_paid = [fva_pmt * fva_n * t for t in years]
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=years, y=vals_fv,   name="FV of annuity", line=dict(color="#00C896", width=2.5), fill="tozeroy", fillcolor="rgba(0,200,150,0.08)"))
+            fig.add_trace(go.Scatter(x=years, y=vals_paid, name="Total paid in", line=dict(color="#FFB300", width=2, dash="dot")))
+            fig.update_layout(
+                template="plotly_dark", paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
+                title="Annuity growth vs Contributions",
+                xaxis=dict(title="Years", gridcolor="#21262D"),
+                yaxis=dict(title="Value ($)", gridcolor="#21262D"),
+                height=350, margin=dict(l=10, r=10, t=50, b=10),
+                legend=dict(orientation="h", y=1.08),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ─── PV ANNUITY ──────────────────────────────────────────────────────
+    with calc_tabs[5]:
+        st.markdown("##### Formula: `PVA = P × [(1 − (1 + r/n)^(−n·t)) / (r/n)]` — lump sum equivalent of future payments (loans!)")
+        c1, c2, c3 = st.columns(3)
+        pva_pmt   = c1.number_input("Payment per period ($)", min_value=0.0, value=200.0, step=25.0, key="pva_p")
+        pva_rate  = c2.number_input("Annual rate (%)",        min_value=0.0, value=7.0, step=0.25, key="pva_r")
+        pva_time  = c3.number_input("Time (years)",           min_value=0.0, value=5.0, step=1.0, key="pva_t")
+        pva_n = _freq_selector("pva")
+
+        pva_result = calculate_present_value_annuity(pva_pmt, pva_rate/100, pva_time, pva_n)
+        total_received = pva_pmt * pva_n * pva_time
+
+        m1, m2, m3 = st.columns(3)
+        with m1: _metric_card("Present value of annuity", f"${pva_result:,.2f}")
+        with m2: _metric_card("Total received",           f"${total_received:,.2f}", "#0078FF")
+        with m3: _metric_card("Interest portion",         f"${total_received - pva_result:,.2f}", "#FFB300")
+
+        if pva_time > 0:
+            years = np.arange(1, int(pva_time)+2)
+            vals = [calculate_present_value_annuity(pva_pmt, pva_rate/100, t, pva_n) for t in years]
+            st.plotly_chart(_growth_chart(years, vals, "PV of Annuity vs Term"), use_container_width=True)

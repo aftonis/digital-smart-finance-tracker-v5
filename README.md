@@ -1,14 +1,15 @@
-# 💰 Smart Digital Finance Tracker
+# 💰 Digital Smart Finance Tracker v5
 
-> **A real-time stock & crypto dashboard combined with AI-powered financial analysis and personal expense tracking — all in one sleek app.**
+> **Quartet Protocol — Mission Charlie: Analyst + Reporting Engine.**
+> A real-time stock & crypto dashboard + AI financial analysis + loan rate tracker + time-value-of-money calculator — all in one Streamlit app, containerised with Docker.
 
 ---
 
 ## 🌟 What Is This App?
 
-The **Smart Digital Finance Tracker** is a full-stack personal finance and investment platform. It pulls live market data for any stock or cryptocurrency, renders interactive candlestick charts, runs a silent AI analysis engine in the background, and delivers professional financial reports — all through a clean, user-friendly dashboard.
+The **Digital Smart Finance Tracker v5** is a full-stack personal finance and investment platform built for the Week 19 Capstone (Mission Charlie — The Insight Engine). It pulls live market data for any stock or cryptocurrency, renders interactive candlestick charts, runs an AI analysis engine, tracks major-loan interest rates at daily/weekly/monthly resolution, and includes a full time-value-of-money calculator ported from the original Colab notebook.
 
-No finance jargon. No technical setup for end users. Just enter a ticker, hit a button, and get answers.
+No finance jargon. No technical setup for end users. Just enter a ticker or tweak an APR, and get answers.
 
 ---
 
@@ -18,8 +19,38 @@ No finance jargon. No technical setup for end users. Just enter a ticker, hit a 
 |---|---|
 | 📈 **Markets** | Live candlestick chart, volume, moving averages, key metrics for any stock or crypto |
 | 🤖 **AI Analysis** | Ask any finance question — get a structured, professional report in 1–3 minutes |
-| 📊 **My Finances** | Spending breakdown by category with interactive pie chart and transaction history |
+| 📊 **My Finances** | Major loan rates (daily/weekly/monthly) + spending breakdown with pie chart and history |
 | ➕ **Add Transaction** | Log daily expenses with date, amount, category, and description |
+| 🧮 **Calculator** | Simple & compound interest, Future Value, Present Value, FV & PV Annuities — with growth charts |
+
+---
+
+## 🧮 Calculator — Time Value of Money
+
+Six financial formulas, each with inputs, a result card, and a growth chart:
+
+| Formula | Used for |
+|---|---|
+| Simple Interest `I = P·r·t` | Short-term loans, bonds |
+| Compound Interest `A = P(1+r/n)^(n·t)` | Savings, deposits |
+| Future Value | "What will my money be worth?" |
+| Present Value | "What's this future payout worth today?" |
+| FV Annuity | Retirement saving, SIPs |
+| PV Annuity | Loan principal from repayments |
+
+All compounding frequencies supported: annual, semi-annual, quarterly, monthly, weekly, daily.
+
+---
+
+## 🏦 Loan Rate Tracker (My Finances tab)
+
+Editable table of 9 major loan types (mortgage, auto, personal, credit card, student, HELOC, payday) with:
+
+- Daily / Weekly / Monthly effective rate (APR ÷ 365, 52, 12)
+- Daily / Weekly / Monthly / Yearly interest cost on your principal
+- Grouped bar chart comparing interest cost across loan types
+
+Edit any APR or principal → table and chart recalculate instantly.
 
 ---
 
