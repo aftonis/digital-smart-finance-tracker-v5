@@ -40,6 +40,44 @@ See [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example) for the
 
 ---
 
+## 🔧 Jenkins CI/CD Setup
+
+Jenkins runs the full **ADLC pipeline** (Plan → Design → Execute → Deploy) on every push to `main`.
+
+### Start Jenkins
+```bash
+docker compose up -d jenkins
+# → open http://localhost:8080
+```
+
+### First-time setup (one-time only)
+1. **Get the admin password:**
+   ```bash
+   docker compose logs jenkins | grep -A2 "Please use"
+   ```
+2. Paste the password into http://localhost:8080 → **Install suggested plugins** → create admin user
+3. Install two extra plugins: **Manage Jenkins → Plugins → Available**:
+   - `Docker Pipeline`
+   - `Git`
+4. **Create the pipeline job automatically:**
+   - Go to **Manage Jenkins → Script Console**
+   - Paste the contents of [`jenkins/create-pipeline-job.groovy`](jenkins/create-pipeline-job.groovy)
+   - Click **Run**
+   - ✅ Job `digital-smart-finance-tracker-v5` appears in the dashboard
+5. Click **Build Now** → watch all 4 ADLC stages run
+
+### Pipeline stages (ADLC)
+| Stage | ADLC Phase | What it does |
+|---|---|---|
+| Plan — Validate | Phase 1 | Checkout, check required files, scan for hard-coded secrets |
+| Design — Test | Phase 2 | Run full pytest suite inside an isolated Docker container |
+| Execute — Docker Build | Phase 3 | Build image, spin up container, smoke-test HTTP 200 |
+| Deploy — Tag & Report | Phase 4 | Tag as `latest`, print deployment instructions |
+
+Jenkins polls GitHub every 5 minutes — any push to `main` triggers the pipeline automatically.
+
+---
+
 ## 🌟 What Is This App?
 
 The **Digital Smart Finance Tracker v5** is a full-stack personal finance and investment platform built for the Week 19 Capstone (Mission Charlie — The Insight Engine). It pulls live market data for any stock or cryptocurrency, renders interactive candlestick charts, runs an AI analysis engine, tracks major-loan interest rates at daily/weekly/monthly resolution, and includes a full time-value-of-money calculator ported from the original Colab notebook.
