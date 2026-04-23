@@ -5,6 +5,41 @@
 
 ---
 
+## 🚀 Quick Start
+
+### Run locally with Docker (recommended)
+```bash
+git clone https://github.com/aftonis/digital-smart-finance-tracker-v5.git
+cd digital-smart-finance-tracker-v5
+cp .env.example .env              # then edit .env and add your Anthropic key
+docker compose up -d app
+# → open http://localhost:8501
+```
+
+### Run locally without Docker
+```bash
+pip install -r requirements.txt
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # edit keys
+streamlit run app/streamlit_app.py
+```
+
+### Deploy to Streamlit Community Cloud (free)
+1. Push this repo to your own GitHub (or fork it)
+2. Go to https://share.streamlit.io → **New app**
+3. Select the repo, branch `main`, main file `app/streamlit_app.py`
+4. Click **Advanced settings → Secrets** and paste:
+   ```toml
+   ANTHROPIC_API_KEY = "sk-ant-api03-your-real-key"
+   CLAUDE_MODEL      = "anthropic/claude-3-5-sonnet-20241022"
+   ```
+5. **Deploy** — your app goes live at `https://<name>.streamlit.app`
+
+See [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example) for the full secrets template.
+
+> ⚠️ **Never commit real keys.** `.env` and `.streamlit/secrets.toml` are gitignored — only the `.example` versions are pushed.
+
+---
+
 ## 🌟 What Is This App?
 
 The **Digital Smart Finance Tracker v5** is a full-stack personal finance and investment platform built for the Week 19 Capstone (Mission Charlie — The Insight Engine). It pulls live market data for any stock or cryptocurrency, renders interactive candlestick charts, runs an AI analysis engine, tracks major-loan interest rates at daily/weekly/monthly resolution, and includes a full time-value-of-money calculator ported from the original Colab notebook.

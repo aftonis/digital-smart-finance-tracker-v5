@@ -1,5 +1,6 @@
 """
-Smart Digital Finance Tracker — Main Dashboard
+Digital Smart Finance Tracker v5 — Main Dashboard
+Quartet Protocol Mission Charlie: Analyst + Reporting Engine
 """
 import streamlit as st
 import sys
@@ -10,6 +11,16 @@ import plotly.express as px
 from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# ── Secrets bridge: Streamlit Cloud → os.environ ──────────────────────────────
+# On Streamlit Cloud, secrets are injected via st.secrets (not env vars).
+# Locally, .env is loaded by python-dotenv in crew.py.
+# This bridge makes the same crew code work in both environments unchanged.
+try:
+    for _k, _v in st.secrets.items():
+        os.environ.setdefault(_k, str(_v))
+except (FileNotFoundError, Exception):
+    pass  # No secrets.toml present → running locally with .env
 
 from src.crew import run_crew
 from src.tools.database import (
