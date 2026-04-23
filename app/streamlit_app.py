@@ -140,6 +140,7 @@ setup_knowledge_db()
 
 for key, default in [
     ("last_result", None),
+    ("last_status", None),        # "success" | "auth" | "quota" | "failed"
     ("run_count", 0),
     ("last_ticker", ""),          # empty → don't auto-load a chart on first visit
     ("last_query", ""),
@@ -418,8 +419,36 @@ with tab2:
 
     if clear_btn:
         st.session_state["last_result"] = None
+        st.session_state["last_status"] = None
         st.session_state["last_query"] = ""
         st.rerun()
+
+    def _classify_result(result: str) -> tuple[str, str | None]:
+        """
+        Returns (status, hint) where status is 'success' | 'auth' | 'quota' | 'failed'
+        and hint is a targeted user-facing message or None.
+        """
+        if not result:
+            return "failed", "Empty response from the analysis pipeline."
+        r = result.lower()
+        if not r.startswith("analysis failed"):
+            return "success", None
+        if "401" in r or "invalid x-api-key" in r or "authentication" in r:
+            return "auth", (
+                "**Anthropic rejected the API key** (HTTP 401). Fix:\n\n"
+                "1. Go to https://console.anthropic.com/settings/keys\n"
+                "2. Check your key is active, or create a new one\n"
+                "3. Update it in **Streamlit Cloud → ⋮ → Settings → Secrets**\n"
+                "4. Make sure the TOML line is: `ANTHROPIC_API_KEY = \"sk-ant-api03-...\"` (with quotes)\n"
+                "5. Save — the app auto-reboots in ~15 seconds"
+            )
+        if "insufficient_quota" in r or "429" in r or "rate_limit" in r or "quota" in r:
+            return "quota", (
+                "**Out of Anthropic credits or rate-limited.** "
+                "Top up at https://console.anthropic.com/settings/billing "
+                "or wait a moment and retry."
+            )
+        return "failed", None
 
     if run_btn:
         if not query.strip():
@@ -429,24 +458,42 @@ with tab2:
             with st.spinner("Analysing... this takes 1–3 minutes ⏳"):
                 try:
                     result = run_crew(query.strip())
-                    st.session_state["last_result"] = result
-                    st.session_state["run_count"] += 1
-                    save_run(user_topic=query.strip(), result=result, status="success")
                 except Exception as e:
-                    save_run(user_topic=query.strip(), result=str(e), status="failed")
-                    st.error(f"Analysis error: {e}")
+                    result = f"Analysis Failed: {e}"
+                status, _ = _classify_result(result)
+                st.session_state["last_result"] = result
+                st.session_state["last_status"] = status
+                st.session_state["run_count"] += 1
+                save_run(user_topic=query.strip(), result=result, status=status)
 
     if st.session_state["last_result"]:
-        st.success("✅ Analysis complete")
-        st.markdown('<div class="report-box">', unsafe_allow_html=True)
-        st.markdown(st.session_state["last_result"])
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.download_button(
-            label="📥 Download Report",
-            data=st.session_state["last_result"],
-            file_name=f"finance_report_{st.session_state['last_query'][:25].replace(' ', '_')}.md",
-            mime="text/markdown",
-        )
+        status = st.session_state.get("last_status", "success")
+        _, hint = _classify_result(st.session_state["last_result"])
+        if status == "success":
+            st.success("✅ Analysis complete")
+            st.markdown('<div class="report-box">', unsafe_allow_html=True)
+            st.markdown(st.session_state["last_result"])
+            st.markdown('</div>', unsafe_allow_html=True)
+            st.download_button(
+                label="📥 Download Report",
+                data=st.session_state["last_result"],
+                file_name=f"finance_report_{st.session_state['last_query'][:25].replace(' ', '_')}.md",
+                mime="text/markdown",
+            )
+        elif status == "auth":
+            st.error("🔑 Authentication failed")
+            st.markdown(hint)
+            with st.expander("Technical details"):
+                st.code(st.session_state["last_result"], language="text")
+        elif status == "quota":
+            st.warning("💳 API quota issue")
+            st.markdown(hint)
+            with st.expander("Technical details"):
+                st.code(st.session_state["last_result"], language="text")
+        else:
+            st.error("❌ Analysis failed")
+            st.code(st.session_state["last_result"], language="text")
+            st.caption("If this keeps happening, check the app logs in Streamlit Cloud → Manage app → Logs.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — MY FINANCES
