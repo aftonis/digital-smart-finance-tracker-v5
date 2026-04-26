@@ -48,34 +48,11 @@ pipeline {
 
                     echo ""
                     echo "--- Secrets hygiene check ---"
-                    python3 -c "
-import os, sys
-SKIP_DIRS  = {'.git', '__pycache__', '.venv', 'venv'}
-SKIP_FILES = {'.env', 'secrets.toml', 'secrets.toml.example', '.env.example'}
-EXTS = ('.py', '.yml', '.yaml', '.toml', '.groovy')
-PLACEHOLDERS = ('...', 'your_', 'REPLACE_WITH', 'example')
-leaks = []
-for root, dirs, files in os.walk('.'):
-    dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
-    for f in files:
-        if f in SKIP_FILES or not f.endswith(EXTS):
-            continue
-        path = os.path.join(root, f)
-        try:
-            for i, line in enumerate(open(path, encoding='utf-8', errors='ignore'), 1):
-                if any(p in line for p in PLACEHOLDERS):
-                    continue
-                if 'sk-ant-api03-' in line or 'sk-proj-' in line:
-                    leaks.append(f'{path}:{i}: {line.strip()[:80]}')
-        except Exception:
-            pass
-if leaks:
-    print('LEAKED KEYS FOUND:')
-    for l in leaks: print(l)
-    sys.exit(1)
-print('No hard-coded secrets found')
-"
-                    echo "✔ Secrets hygiene passed"
+                    ANT_LEAKS=$(grep -r "sk-ant-api03-" . --include="*.py" --include="*.yml" --include="*.yaml" --include="*.toml" --include="*.groovy" --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude-dir=venv 2>/dev/null | grep -Fv "..." | grep -v "your_" | grep -v "REPLACE_WITH" | grep -v "example" || true)
+                    if [ -n "$ANT_LEAKS" ]; then echo "✘ HARD-CODED ANTHROPIC KEY FOUND — aborting" && exit 1; fi
+                    OAI_LEAKS=$(grep -r "sk-proj-" . --include="*.py" --include="*.yml" --include="*.yaml" --include="*.toml" --include="*.groovy" --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude-dir=venv 2>/dev/null | grep -Fv "..." | grep -v "your_" | grep -v "REPLACE_WITH" | grep -v "example" || true)
+                    if [ -n "$OAI_LEAKS" ]; then echo "✘ HARD-CODED OPENAI KEY FOUND — aborting" && exit 1; fi
+                    echo "✔ No hard-coded secrets found"
 
                     echo ""
                     echo "--- .gitignore check ---"
