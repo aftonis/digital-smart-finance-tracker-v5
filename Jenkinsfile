@@ -48,20 +48,14 @@ pipeline {
 
                     echo ""
                     echo "--- Secrets hygiene check ---"
-                    # Match real keys: sk-ant-api03- or sk-proj- followed by 20+ alphanum chars
-                    # Exclude: .env files, *.example files, lines with '...' (template placeholders),
-                    #          lines with 'your_' (placeholder text), comment lines
-                    REAL_KEYS=$(grep -rE "sk-ant-api03-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}" . \
-                        --include="*.py" --include="*.yml" --include="*.yaml" --include="*.toml" \
-                        --exclude="*.example" 2>/dev/null \
-                        | grep -v "\.env" \
-                        | grep -v "\.\.\." \
-                        | grep -v "your_" \
-                        | grep -v "REPLACE_WITH" \
-                        | grep -v "^#" || true)
-                    if [ -n "$REAL_KEYS" ]; then
-                        echo "✘ HARD-CODED API KEY DETECTED — build aborted:"
-                        echo "$REAL_KEYS"
+                    LEAKED=$(grep -r "sk-ant-api03-" . --include="*.py" --include="*.yml" --include="*.yaml" 2>/dev/null | grep -v "example" | grep -v "\.\.\." | grep -v "your_" | grep -v "REPLACE_WITH" || true)
+                    if [ -n "$LEAKED" ]; then
+                        echo "✘ HARD-CODED ANTHROPIC KEY DETECTED — build aborted"
+                        exit 1
+                    fi
+                    LEAKED2=$(grep -r "sk-proj-" . --include="*.py" --include="*.yml" 2>/dev/null | grep -v "example" | grep -v "\.\.\." | grep -v "your_" || true)
+                    if [ -n "$LEAKED2" ]; then
+                        echo "✘ HARD-CODED OPENAI KEY DETECTED — build aborted"
                         exit 1
                     fi
                     echo "✔ No hard-coded secrets found"
