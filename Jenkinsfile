@@ -48,17 +48,34 @@ pipeline {
 
                     echo ""
                     echo "--- Secrets hygiene check ---"
-                    LEAKED=$(grep -r "sk-ant-api03-" . --include="*.py" --include="*.yml" --include="*.yaml" 2>/dev/null | grep -v "example" | grep -v "\.\.\." | grep -v "your_" | grep -v "REPLACE_WITH" || true)
-                    if [ -n "$LEAKED" ]; then
-                        echo "✘ HARD-CODED ANTHROPIC KEY DETECTED — build aborted"
-                        exit 1
-                    fi
-                    LEAKED2=$(grep -r "sk-proj-" . --include="*.py" --include="*.yml" 2>/dev/null | grep -v "example" | grep -v "\.\.\." | grep -v "your_" || true)
-                    if [ -n "$LEAKED2" ]; then
-                        echo "✘ HARD-CODED OPENAI KEY DETECTED — build aborted"
-                        exit 1
-                    fi
-                    echo "✔ No hard-coded secrets found"
+                    python3 -c "
+import os, sys
+SKIP_DIRS  = {'.git', '__pycache__', '.venv', 'venv'}
+SKIP_FILES = {'.env', 'secrets.toml', 'secrets.toml.example', '.env.example'}
+EXTS = ('.py', '.yml', '.yaml', '.toml', '.groovy')
+PLACEHOLDERS = ('...', 'your_', 'REPLACE_WITH', 'example')
+leaks = []
+for root, dirs, files in os.walk('.'):
+    dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+    for f in files:
+        if f in SKIP_FILES or not f.endswith(EXTS):
+            continue
+        path = os.path.join(root, f)
+        try:
+            for i, line in enumerate(open(path, encoding='utf-8', errors='ignore'), 1):
+                if any(p in line for p in PLACEHOLDERS):
+                    continue
+                if 'sk-ant-api03-' in line or 'sk-proj-' in line:
+                    leaks.append(f'{path}:{i}: {line.strip()[:80]}')
+        except Exception:
+            pass
+if leaks:
+    print('LEAKED KEYS FOUND:')
+    for l in leaks: print(l)
+    sys.exit(1)
+print('No hard-coded secrets found')
+"
+                    echo "✔ Secrets hygiene passed"
 
                     echo ""
                     echo "--- .gitignore check ---"
