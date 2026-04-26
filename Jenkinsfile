@@ -173,7 +173,7 @@ pipeline {
         always {
             // Clean up any leftover test containers
             sh "docker rm -f finance-tracker-ci-${BUILD_NUMBER} ${TEST_CONTAINER} 2>/dev/null || true"
-            cleanWs()
+            deleteDir()   // built-in — no plugin required
         }
     }
 }
