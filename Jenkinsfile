@@ -71,19 +71,7 @@ pipeline {
 
                 echo 'Running unit tests inside isolated Docker container...'
                 sh '''
-                    docker run --rm \
-                        --name finance-tracker-ci-${BUILD_NUMBER} \
-                        -v "$(pwd)":/app \
-                        -w /app \
-                        python:3.12-slim \
-                        bash -c "
-                            pip install --quiet --no-cache-dir \
-                                pytest pandas plotly streamlit python-dotenv pydantic \
-                                crewai>=0.80.0 crewai-tools>=0.15.0 \
-                                requests pyyaml numpy 2>&1 | tail -5 &&
-                            echo '--- Running test suite ---' &&
-                            pytest tests/ -v --tb=short 2>&1
-                        "
+                    docker run --rm --name finance-tracker-ci-${BUILD_NUMBER} -v "$(pwd)":/app -w /app python:3.12-slim bash -c "pip install --quiet --no-cache-dir pytest && echo '--- Running test suite ---' && pytest tests/ -v --tb=short"
                 '''
             }
             post {
