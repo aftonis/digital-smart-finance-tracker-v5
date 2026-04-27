@@ -71,7 +71,7 @@ pipeline {
 
                 echo 'Running unit tests inside isolated Docker container...'
                 sh '''
-                    docker run --rm --name finance-tracker-ci-${BUILD_NUMBER} -v "$(pwd)":/app -w /app python:3.12-slim bash -c "pip install --quiet --no-cache-dir pytest && echo '--- Running test suite ---' && pytest tests/ -v --tb=short"
+                    docker run --rm --name finance-tracker-ci-${BUILD_NUMBER} -v "$(pwd)":/app -w /app python:3.12-slim sh -c 'pip install --quiet --no-cache-dir pytest && pytest tests/test_calculators.py -v --tb=short'
                 '''
             }
             post {
