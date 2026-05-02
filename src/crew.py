@@ -42,7 +42,7 @@ _CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "anthropic/claude-sonnet-4-6")
 claude_llm = LLM(
     model=_CLAUDE_MODEL,
     temperature=0.3,
-    max_tokens=5000,
+    max_tokens=1500,   # kept low to stay within Groq free-tier 6 k TPM limit
 )
 
 # ── Serper web search is optional — only enable if SERPER_API_KEY is set ─────
@@ -107,7 +107,7 @@ def build_crew(user_topic: str) -> Crew:
     )
 
     for agent in [expense_analyst, financial_advisor, report_writer]:
-        apply_budget_cap(agent, max_tokens=5000)
+        apply_budget_cap(agent, max_tokens=1500)
 
     expense_analysis_task = Task(
         description     = tasks_cfg["expense_analysis_task"]["description"].format(user_topic=user_topic),

@@ -27,18 +27,31 @@ logger = logging.getLogger(__name__)
 # Layer 1: Retry ----------------------------------------------------------------
 
 def execute_with_retry(api_call_func: Callable, max_retries: int = 3) -> Any:
-    """Exponential backoff + jitter retry wrapper."""
+    """Exponential backoff + jitter retry wrapper.
+
+    Rate-limit (429) errors get a longer 60-second wait so the provider
+    token-per-minute window resets before the next attempt.
+    """
     last_error = None
     for attempt in range(max_retries):
         try:
             return api_call_func()
         except Exception as e:
             last_error = e
-            wait_time = (2 ** attempt) + random.uniform(0, 1)
-            logger.warning(
-                f"Attempt {attempt + 1}/{max_retries} failed: {e}. "
-                f"Retrying in {wait_time:.2f}s..."
-            )
+            err_str = str(e).lower()
+            # 429 / rate-limit: wait for provider window to reset (60 s)
+            if "429" in err_str or "rate_limit" in err_str or "rate limit" in err_str:
+                wait_time = 65 + random.uniform(0, 5)
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} — rate-limited (429). "
+                    f"Waiting {wait_time:.0f}s for provider window to reset..."
+                )
+            else:
+                wait_time = (2 ** attempt) + random.uniform(0, 1)
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} failed: {e}. "
+                    f"Retrying in {wait_time:.2f}s..."
+                )
             time.sleep(wait_time)
     raise Exception(f"Layer 1 Failure: Max retries exceeded. Last error: {last_error}")
 

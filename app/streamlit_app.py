@@ -433,20 +433,23 @@ with tab2:
         r = result.lower()
         if not r.startswith("analysis failed"):
             return "success", None
-        if "401" in r or "invalid x-api-key" in r or "authentication" in r:
+        if "401" in r or "invalid x-api-key" in r or "authentication" in r or "invalid_api_key" in r:
             return "auth", (
-                "**Anthropic rejected the API key** (HTTP 401). Fix:\n\n"
-                "1. Go to https://console.anthropic.com/settings/keys\n"
-                "2. Check your key is active, or create a new one\n"
-                "3. Update it in **Streamlit Cloud → ⋮ → Settings → Secrets**\n"
-                "4. Make sure the TOML line is: `ANTHROPIC_API_KEY = \"sk-ant-api03-...\"` (with quotes)\n"
-                "5. Save — the app auto-reboots in ~15 seconds"
+                "**API key rejected** (HTTP 401). Fix:\n\n"
+                "- **Groq key invalid?** Check https://console.groq.com/keys\n"
+                "- **Anthropic key invalid?** Check https://console.anthropic.com/settings/keys\n"
+                "- Update the key in **Streamlit Cloud → ⋮ → Settings → Secrets** (or your local `.env`)\n"
+                "- Make sure the TOML line has quotes: `GROQ_API_KEY = \"gsk_...\"`\n"
+                "- Save — the app auto-reboots in ~15 seconds"
             )
         if "insufficient_quota" in r or "429" in r or "rate_limit" in r or "quota" in r:
             return "quota", (
-                "**Out of Anthropic credits or rate-limited.** "
-                "Top up at https://console.anthropic.com/settings/billing "
-                "or wait a moment and retry."
+                "**LLM provider rate-limit hit.** The pipeline automatically retries "
+                "with backoff, but the free-tier limit was still exceeded.\n\n"
+                "**Quick fixes:**\n"
+                "- Wait 60 seconds and click **Run Analysis** again\n"
+                "- If using Groq free tier: check your usage at https://console.groq.com/usage\n"
+                "- If using Anthropic: top up at https://console.anthropic.com/settings/billing"
             )
         return "failed", None
 
